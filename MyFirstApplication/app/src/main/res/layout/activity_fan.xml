@@ -1,0 +1,72 @@
+<?xml version="1.0" encoding="utf-8"?>
+<TableLayout
+    xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:orientation="vertical"
+    android:stretchColumns="1,2"
+    android:shrinkColumns="0"
+    >
+    <TextView
+        android:text="FAN"
+        android:gravity="center"
+        android:layout_height="50dp"
+        android:textSize="30dp"
+        android:textStyle="bold"
+        />
+    <TableRow>
+        <TextView
+            android:text="Values:"
+            android:textSize="19dp"
+            android:textStyle="bold"
+            />
+
+        <EditText
+            android:id="@+id/txt_valuesFan"
+            android:layout_span="2" />
+    </TableRow>
+<!--    <TableRow>-->
+<!--        <TextView-->
+<!--            android:text="Password:"-->
+<!--            android:textSize="19dp"-->
+<!--            android:textStyle="bold"-->
+<!--            />-->
+
+<!--        <EditText-->
+<!--            android:id="@+id/txt_Password"-->
+<!--            android:layout_span="2" />-->
+<!--    </TableRow>-->
+    <TableRow>
+
+        <Button
+            android:id="@+id/btn_saveFan"
+            android:layout_height="60dp"
+            android:layout_marginLeft="4dp"
+            android:layout_marginRight="2dp"
+            android:onClick="onclickOK"
+            android:text="ok"
+            android:textSize="16dp" />
+
+<!--        <Button-->
+<!--            android:id="@+id/btn_CANCEL"-->
+<!--            android:layout_height="60dp"-->
+<!--            android:layout_marginLeft="2dp"-->
+<!--            android:layout_marginRight="2dp"-->
+<!--            android:text="Cancel"-->
+<!--            android:textSize="16dp"-->
+<!--            android:onClick="onclickCLEAR"-->
+<!--            />-->
+
+<!--        <Button-->
+<!--            android:id="@+id/btn_FORGOTPWD"-->
+<!--            android:layout_height="60dp"-->
+<!--            android:layout_marginLeft="2dp"-->
+<!--            android:layout_marginRight="4dp"-->
+<!--            android:text="forgot password"-->
+<!--            android:textSize="16dp"-->
+<!--            android:onClick="onclickFORGOTPWD"-->
+            />
+    </TableRow>
+</TableLayout>
