@@ -79,8 +79,8 @@ public class ContactsActivity extends AppCompatActivity {
             @Override
             public void onClick(View view) {
                 String name = txt_Name.getText().toString().trim();
-                String phone = txtPhone.getText().toString().trim();
-                if (name.equals("") || phone.equals("")) {
+//                String phone = txtPhone.getText().toString().trim();
+                if (name.equals("") ) {
                     Toast.makeText(ContactsActivity.this, "Field(s) empty!", Toast.LENGTH_SHORT).show();
                 }
                 else {
@@ -88,10 +88,11 @@ public class ContactsActivity extends AppCompatActivity {
                             &&  checkSelfPermission(Manifest.permission.WRITE_CONTACTS)!= PackageManager.PERMISSION_GRANTED) {
                         requestPermissions(new String[]{Manifest.permission.WRITE_CONTACTS}, 1);
                     }
-                    deleteContact(name, phone);
+                    deleteContact(name);
                     Toast.makeText(ContactsActivity.this, "Delete success", Toast.LENGTH_SHORT).show();
-//                    addControls();
                     showAllContacts();
+                    txt_Name.setText("");
+                    txtPhone.setText("");
 //                    if (result) {
 //
 //                    }
@@ -103,42 +104,91 @@ public class ContactsActivity extends AppCompatActivity {
         });
     }
 
-    public void deleteContact(String phone, String name) {
-        ArrayList<ContentProviderOperation> ops = new ArrayList<ContentProviderOperation>();
-        String[] args = new String[] { String.valueOf(getContactID(phone)) };
-        ops.add(ContentProviderOperation.newDelete(ContactsContract.RawContacts.CONTENT_URI).withSelection(ContactsContract.RawContacts.CONTACT_ID + "=?", args).build());
-        try {
-            getApplicationContext().getContentResolver().applyBatch(ContactsContract.AUTHORITY, ops);
-        } catch (RemoteException e) {
-            e.printStackTrace();
-        } catch (OperationApplicationException e) {
-            e.printStackTrace();
-        }
+    private void deleteContact(String name)
+    {
+        // First select raw contact id by given name and family name.
+        long rawContactId = getRawContactIdByName(name);
+
+        ContentResolver contentResolver = getContentResolver();
+
+        //******************************* delete data table related data ****************************************
+        // Data table content process uri.
+        Uri dataContentUri = ContactsContract.Data.CONTENT_URI;
+
+        // Create data table where clause.
+        StringBuffer dataWhereClauseBuf = new StringBuffer();
+        dataWhereClauseBuf.append(ContactsContract.Data.RAW_CONTACT_ID);
+        dataWhereClauseBuf.append(" = ");
+        dataWhereClauseBuf.append(rawContactId);
+
+        // Delete all this contact related data in data table.
+        contentResolver.delete(dataContentUri, dataWhereClauseBuf.toString(), null);
+
+
+        //******************************** delete raw_contacts table related data ***************************************
+        // raw_contacts table content process uri.
+        Uri rawContactUri = ContactsContract.RawContacts.CONTENT_URI;
+
+        // Create raw_contacts table where clause.
+        StringBuffer rawContactWhereClause = new StringBuffer();
+        rawContactWhereClause.append(ContactsContract.RawContacts._ID);
+        rawContactWhereClause.append(" = ");
+        rawContactWhereClause.append(rawContactId);
+
+        // Delete raw_contacts table related data.
+        contentResolver.delete(rawContactUri, rawContactWhereClause.toString(), null);
+
+        //******************************** delete contacts table related data ***************************************
+        // contacts table content process uri.
+        Uri contactUri = ContactsContract.Contacts.CONTENT_URI;
+
+        // Create contacts table where clause.
+        StringBuffer contactWhereClause = new StringBuffer();
+        contactWhereClause.append(ContactsContract.Contacts._ID);
+        contactWhereClause.append(" = ");
+        contactWhereClause.append(rawContactId);
+
+        // Delete raw_contacts table related data.
+        contentResolver.delete(contactUri, contactWhereClause.toString(), null);
+
     }
 
-    private long getContactID(String number) {
-        Uri contactUri = Uri.withAppendedPath(ContactsContract.PhoneLookup.CONTENT_FILTER_URI, Uri.encode(number));
-        String[] projection = { ContactsContract.PhoneLookup._ID };
-        Cursor cursor = null;
+    @SuppressLint("Range")
+    private long getRawContactIdByName(String name)
+    {
+        ContentResolver contentResolver = getContentResolver();
 
-        try {
-            cursor = getApplicationContext().getContentResolver().query(contactUri, projection, null, null,null);
-            if (cursor.moveToFirst()) {
-                int personID = cursor.getColumnIndex(ContactsContract.PhoneLookup._ID);
-                return cursor.getLong(personID);
-            }
+        // Query raw_contacts table by display name field ( given_name family_name ) to get raw contact id.
 
-//            int personID = cursor.getColumnIndex(ContactsContract.PhoneLookup._ID);
-            return -1;
-        } catch (Exception e) {
-            e.printStackTrace();
-        } finally {
-            if (cursor != null) {
-                cursor.close();
-                cursor = null;
+        // Create query column array.
+        String queryColumnArr[] = {ContactsContract.RawContacts._ID};
+
+        // Create where condition clause.
+        String displayName = name;
+        String whereClause = ContactsContract.RawContacts.DISPLAY_NAME_PRIMARY + " = '" + displayName + "'";
+
+        // Query raw contact id through RawContacts uri.
+        Uri rawContactUri = ContactsContract.RawContacts.CONTENT_URI;
+
+        // Return the query cursor.
+        Cursor cursor = contentResolver.query(rawContactUri, queryColumnArr, whereClause, null, null);
+
+        long rawContactId = -1;
+
+        if(cursor!=null)
+        {
+            // Get contact count that has same display name, generally it should be one.
+            int queryResultCount = cursor.getCount();
+            // This check is used to avoid cursor index out of bounds exception. android.database.CursorIndexOutOfBoundsException
+            if(queryResultCount > 0)
+            {
+                // Move to the first row in the result cursor.
+                cursor.moveToFirst();
+                // Get raw_contact_id.
+                rawContactId = cursor.getLong(cursor.getColumnIndex(ContactsContract.RawContacts._ID));
             }
         }
-        return -1;
+        return rawContactId;
     }
 
     private void writeContact(String displayName, String number) {
