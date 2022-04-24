@@ -6,6 +6,7 @@ import android.Manifest;
 import android.annotation.SuppressLint;
 import android.content.ContentProviderOperation;
 import android.content.ContentResolver;
+import android.content.ContentValues;
 import android.content.OperationApplicationException;
 import android.content.pm.PackageManager;
 import android.database.Cursor;
@@ -31,7 +32,7 @@ import java.util.ArrayList;
 public class ContactsActivity extends AppCompatActivity {
     private static final int REQUEST_CONTACTS_ASK_PERMISSIONS = 1001;
     private EditText txt_Name, txtPhone;
-    private Button btn_Add, btn_Delete;
+    private Button btn_Add, btn_Delete, btn_Update;
     private ListView listViewContacts;
     ArrayList<Contact> contactArrayList= new ArrayList<>();;
     ArrayAdapter<Contact> contactArrayAdapter;
@@ -102,7 +103,101 @@ public class ContactsActivity extends AppCompatActivity {
                 }
             }
         });
+
+        btn_Update.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View view) {
+                String name = txt_Name.getText().toString().trim();
+                String phone = txtPhone.getText().toString().trim();
+                if (name.equals("") || phone.equals("")) {
+                    Toast.makeText(ContactsActivity.this, "Field(s) empty!", Toast.LENGTH_SHORT).show();
+                }
+                else {
+                    if (Build.VERSION.SDK_INT>=Build.VERSION_CODES.M
+                            &&  checkSelfPermission(Manifest.permission.WRITE_CONTACTS)!= PackageManager.PERMISSION_GRANTED) {
+                        requestPermissions(new String[]{Manifest.permission.WRITE_CONTACTS}, 1);
+                    }
+                    int result = updateContactPhoneByName(name, phone);
+                    if (result != 0) {
+                        Toast.makeText(ContactsActivity.this, "Update success", Toast.LENGTH_SHORT).show();
+                        showAllContacts();
+                        txt_Name.setText("");
+                        txtPhone.setText("");
+                    }
+                    else {
+                        Toast.makeText(ContactsActivity.this, "Update Failure", Toast.LENGTH_SHORT).show();
+                    }
+                }
+            }
+        });
     }
+
+    private int updateContactPhoneByName(String name, String phone)
+    {
+        int ret = 0;
+
+        ContentResolver contentResolver = getContentResolver();
+
+        // Get raw contact id by display name.
+        long rawContactId = getRawContactIdByName(name);
+
+        // Update data table phone number use contact raw contact id.
+        if(rawContactId > -1) {
+            // Update mobile phone number.
+            updatePhoneNumber(contentResolver, rawContactId, ContactsContract.CommonDataKinds.Phone.TYPE_MOBILE, phone);
+
+            // Update work mobile phone number.
+            updatePhoneNumber(contentResolver, rawContactId, ContactsContract.CommonDataKinds.Phone.TYPE_WORK_MOBILE, phone);
+
+            // Update home phone number.
+            updatePhoneNumber(contentResolver, rawContactId, ContactsContract.CommonDataKinds.Phone.TYPE_HOME, phone);
+
+            ret = 1;
+        }else
+        {
+            ret = 0;
+        }
+
+        return ret;
+    }
+
+    private void updatePhoneNumber(ContentResolver contentResolver, long rawContactId, int phoneType, String newPhoneNumber)
+    {
+        // Create content values object.
+        ContentValues contentValues = new ContentValues();
+
+        // Put new phone number value.
+        contentValues.put(ContactsContract.CommonDataKinds.Phone.NUMBER, newPhoneNumber);
+
+        // Create query condition, query with the raw contact id.
+        StringBuffer whereClauseBuf = new StringBuffer();
+
+        // Specify the update contact id.
+        whereClauseBuf.append(ContactsContract.Data.RAW_CONTACT_ID);
+        whereClauseBuf.append("=");
+        whereClauseBuf.append(rawContactId);
+
+        // Specify the row data mimetype to phone mimetype( vnd.android.cursor.item/phone_v2 )
+        whereClauseBuf.append(" and ");
+        whereClauseBuf.append(ContactsContract.Data.MIMETYPE);
+        whereClauseBuf.append(" = '");
+        String mimetype = ContactsContract.CommonDataKinds.Phone.CONTENT_ITEM_TYPE;
+        whereClauseBuf.append(mimetype);
+        whereClauseBuf.append("'");
+
+        // Specify phone type.
+        whereClauseBuf.append(" and ");
+        whereClauseBuf.append(ContactsContract.CommonDataKinds.Phone.TYPE);
+        whereClauseBuf.append(" = ");
+        whereClauseBuf.append(phoneType);
+
+        // Update phone info through Data uri.Otherwise it may throw java.lang.UnsupportedOperationException.
+        Uri dataUri = ContactsContract.Data.CONTENT_URI;
+
+        // Get update data count.
+        int updateCount = contentResolver.update(dataUri, contentValues, whereClauseBuf.toString(), null);
+    }
+
 
     private void deleteContact(String name)
     {
@@ -256,5 +351,6 @@ public class ContactsActivity extends AppCompatActivity {
         this.txtPhone = findViewById(R.id.txtPhone);
         this.btn_Add = findViewById(R.id.btn_Add);
         this.btn_Delete = findViewById(R.id.btn_Delete);
+        this.btn_Update = findViewById(R.id.btn_Update);
     }
 }
